@@ -233,11 +233,14 @@ contract GyroVault is Ownable {
      */
     function rebase() public {
         if (epoch.nextBlock <= block.number) {
-            uint256 prevEpoch = epoch.number;
-            uint256 prevRewards = epoch.distribute;
+            ISGyro(sGyro).rebase(epoch.distribute, epoch.number);
 
             epoch.nextBlock = epoch.nextBlock.add(epoch.period);
             epoch.number++;
+
+            if (distributor != address(0)) {
+                IDistributor(distributor).distribute();
+            }
 
             uint256 balance = contractBalance();
             uint256 staked = ISGyro(sGyro).circulatingSupply();
@@ -246,12 +249,6 @@ contract GyroVault is Ownable {
                 epoch.distribute = 0;
             } else {
                 epoch.distribute = balance.sub(staked);
-            }
-
-            ISGyro(sGyro).rebase(prevRewards, prevEpoch);
-
-            if (distributor != address(0)) {
-                IDistributor(distributor).distribute();
             }
 
             emit LogRebase(epoch.number, epoch.nextBlock, epoch.distribute);
